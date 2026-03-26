@@ -1,29 +1,28 @@
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef uint32_t size_t;
+ENTRY(boot)
 
-extern char __bss[], __bss_end[], __stack_top[];
+SECTIONS {
+    . = 0x80200000;
 
-void *memset(void *buf, char c, size_t n) {
-    uint8_t *p = (uint8_t *) buf;
-    while (n--)
-        *p++ = c;
-    return buf;
-}
+    .text :{
+        KEEP(*(.text.boot));
+        *(.text .text.*);
+    }
 
-void kernel_main(void) {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
+    .rodata : ALIGN(4) {
+        *(.rodata .rodata.*);
+    }
 
-    for (;;);
-}
+    .data : ALIGN(4) {
+        *(.data .data.*);
+    }
 
-__attribute__((section(".text.boot")))
-__attribute__((naked))
-void boot(void) {
-    __asm__ __volatile__(
-        "mv sp, %[stack_top]\n" // Set the stack pointer
-        "j kernel_main\n"       // Jump to the kernel main function
-        :
-        : [stack_top] "r" (__stack_top) // Pass the stack top address as %[stack_top]
-    );
+    .bss : ALIGN(4) {
+        __bss = .;
+        *(.bss .bss.* .sbss .sbss.*);
+        __bss_end = .;
+    }
+
+    . = ALIGN(4);
+    . += 128 * 1024; /* 128KB */
+    __stack_top = .;
 }
